@@ -1,7 +1,7 @@
 <script setup lang="ts">
 const navItems = [
   { label: '主题', href: '#theme' },
-  { label: '文档', href: '#docs' },
+  { label: '文档', href: '/docs' },
   { label: 'GITHUB', href: 'https://github.com', external: true },
   { label: 'DEMO', href: '#demo' },
 ]

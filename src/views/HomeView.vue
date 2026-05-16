@@ -16,6 +16,11 @@ type DeploymentOption = {
   commandLines: string[]
 }
 
+type HeroScreenshot = {
+  src: string
+  alt: string
+}
+
 const heroRef = ref<HTMLElement | null>(null)
 const featuresRef = ref<HTMLElement | null>(null)
 const architectureRef = ref<HTMLElement | null>(null)
@@ -74,6 +79,53 @@ const architectureRestStyle = computed(() => createEnterRestStyle(architectureRe
 const deploymentTitleStyle = computed(() => createEnterTitleStyle(deploymentRevealProgress.value))
 const deploymentRestStyle = computed(() => createEnterRestStyle(deploymentRevealProgress.value))
 
+const heroScreenshots: HeroScreenshot[] = [
+  {
+    src: '/screenshot/screenshot-01.png',
+    alt: 'NeHex 截图 1',
+  },
+  {
+    src: '/screenshot/screenshot-02.png',
+    alt: 'NeHex 截图 2',
+  },
+  {
+    src: '/screenshot/screenshot-03.png',
+    alt: 'NeHex 截图 3',
+  },
+]
+
+const activeScreenshotIndex = ref(0)
+const screenshotTrackStyle = computed(() => ({
+  transform: `translateX(-${activeScreenshotIndex.value * 100}%)`,
+}))
+
+const goToScreenshot = (index: number) => {
+  const total = heroScreenshots.length
+  if (total <= 0) {
+    activeScreenshotIndex.value = 0
+    return
+  }
+  activeScreenshotIndex.value = (index + total) % total
+}
+
+const nextScreenshot = () => goToScreenshot(activeScreenshotIndex.value + 1)
+const prevScreenshot = () => goToScreenshot(activeScreenshotIndex.value - 1)
+
+let heroAutoplayTimer: ReturnType<typeof setInterval> | null = null
+
+const startHeroAutoplay = () => {
+  if (heroAutoplayTimer || heroScreenshots.length <= 1) return
+  heroAutoplayTimer = setInterval(() => {
+    nextScreenshot()
+  }, 5000)
+}
+
+const stopHeroAutoplay = () => {
+  if (!heroAutoplayTimer) return
+  clearInterval(heroAutoplayTimer)
+  heroAutoplayTimer = null
+}
+
 const getSectionScrollProgress = (sectionEl: HTMLElement | null) => {
   if (!sectionEl) return 0
 
@@ -116,11 +168,13 @@ const handleViewportChange = () => {
 
 onMounted(() => {
   updateSectionScrollProgress()
+  startHeroAutoplay()
   window.addEventListener('scroll', handleViewportChange, { passive: true })
   window.addEventListener('resize', handleViewportChange)
 })
 
 onBeforeUnmount(() => {
+  stopHeroAutoplay()
   window.removeEventListener('scroll', handleViewportChange)
   window.removeEventListener('resize', handleViewportChange)
 })
@@ -281,16 +335,54 @@ const activeDeployment = computed<DeploymentOption>(
 <template>
   <section ref="heroRef" class="hero">
     <div class="hero-inner">
-      <p class="hero-kicker hero-rest-animate" :style="heroRestStyle">OPENSOURCE PERSONAL SPACE ENGINE</p>
-      <h1 class="hero-title" :style="heroTitleStyle">
-        <span class="hero-title-primary">NeHex</span>
-        <span class="hero-title-secondary">Blog</span>
-      </h1>
-      <p class="hero-description hero-rest-animate" :style="heroRestStyle">
-        NeHex 是一个前后端分离的次世代开源个人博客引擎,采用Rust构建的引擎可以快速反应，具有更高的稳定性与拓展性；
-      </p>
-      <div class="hero-actions hero-rest-animate" :style="heroRestStyle">
-        <a class="hero-btn hero-btn-primary" href="#quick-start">开始使用</a>
+      <div class="hero-copy">
+        <p class="hero-kicker hero-rest-animate" :style="heroRestStyle">OPENSOURCE PERSONAL SPACE ENGINE</p>
+        <h1 class="hero-title" :style="heroTitleStyle">
+          <span class="hero-title-primary">NeHex</span>
+          <span class="hero-title-secondary">Blog</span>
+        </h1>
+        <p class="hero-description hero-rest-animate" :style="heroRestStyle">
+          NeHex 是一个前后端分离的次世代开源个人博客引擎,采用Rust构建的引擎可以快速反应，具有更高的稳定性与拓展性；
+        </p>
+        <div class="hero-actions hero-rest-animate" :style="heroRestStyle">
+          <a class="hero-btn hero-btn-primary" href="#quick-start">开始使用</a>
+        </div>
+      </div>
+
+      <div
+        class="hero-showcase hero-rest-animate"
+        :style="heroRestStyle"
+        @mouseenter="stopHeroAutoplay"
+        @mouseleave="startHeroAutoplay"
+      >
+        <button class="hero-carousel-control hero-carousel-control-prev" type="button" aria-label="上一张截图" @click="prevScreenshot">
+          ‹
+        </button>
+
+        <div class="hero-carousel-viewport">
+          <div class="hero-carousel-track" :style="screenshotTrackStyle">
+            <figure v-for="shot in heroScreenshots" :key="shot.src" class="hero-carousel-slide">
+              <img class="hero-carousel-image" :src="shot.src" :alt="shot.alt" loading="lazy" />
+            </figure>
+          </div>
+        </div>
+
+        <button class="hero-carousel-control hero-carousel-control-next" type="button" aria-label="下一张截图" @click="nextScreenshot">
+          ›
+        </button>
+
+        <div class="hero-carousel-dots" role="tablist" aria-label="截图切换">
+          <button
+            v-for="(_, index) in heroScreenshots"
+            :key="index"
+            class="hero-carousel-dot"
+            :class="{ 'hero-carousel-dot-active': index === activeScreenshotIndex }"
+            type="button"
+            :aria-label="`切换到第 ${index + 1} 张`"
+            :aria-selected="index === activeScreenshotIndex"
+            @click="goToScreenshot(index)"
+          ></button>
+        </div>
       </div>
     </div>
   </section>
@@ -454,10 +546,15 @@ const activeDeployment = computed<DeploymentOption>(
 .hero-inner {
   position: relative;
   z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   width: 100%;
   max-width: 1200px;
+  min-height: clamp(620px, calc(100svh - 120px), 860px);
   margin: 0 auto;
-  padding: 36px 24px;
+  padding: 28px 24px;
   text-align: center;
 }
 
@@ -480,6 +577,10 @@ const activeDeployment = computed<DeploymentOption>(
 .hero-inner > * {
   position: relative;
   z-index: 1;
+}
+
+.hero-copy {
+  width: 100%;
 }
 
 @keyframes hero-glow-pulse {
@@ -547,6 +648,100 @@ const activeDeployment = computed<DeploymentOption>(
   justify-content: center;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+.hero-showcase {
+  position: relative;
+  margin: 30px auto 0;
+  width: min(100%, 1040px);
+  padding: 0 58px;
+}
+
+.hero-carousel-viewport {
+  width: 100%;
+  border-radius: 20px;
+  overflow: hidden;
+  border: 1px solid rgba(170, 203, 243, 0.2);
+  box-shadow:
+    0 18px 42px rgba(0, 0, 0, 0.42),
+    0 0 0 1px rgba(90, 151, 239, 0.2) inset;
+}
+
+.hero-carousel-track {
+  display: flex;
+  transition: transform 0.58s cubic-bezier(0.22, 0.61, 0.36, 1);
+  will-change: transform;
+}
+
+.hero-carousel-slide {
+  margin: 0;
+  flex: 0 0 100%;
+}
+
+.hero-carousel-image {
+  width: 100%;
+  height: clamp(220px, 34vw, 460px);
+  display: block;
+  object-fit: cover;
+}
+
+.hero-carousel-control {
+  position: absolute;
+  top: 50%;
+  width: 42px;
+  height: 42px;
+  border: 1px solid rgba(182, 214, 250, 0.36);
+  border-radius: 999px;
+  background: rgba(8, 16, 29, 0.84);
+  color: #dcecff;
+  font-size: 28px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transform: translateY(-50%);
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.hero-carousel-control:hover {
+  background: rgba(20, 41, 72, 0.94);
+  border-color: rgba(169, 210, 255, 0.62);
+  color: #ffffff;
+}
+
+.hero-carousel-control-prev {
+  left: 0;
+}
+
+.hero-carousel-control-next {
+  right: 0;
+}
+
+.hero-carousel-dots {
+  margin-top: 12px;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.hero-carousel-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  border: none;
+  padding: 0;
+  background: rgba(194, 222, 255, 0.34);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.hero-carousel-dot-active {
+  width: 24px;
+  background: #8ec0ff;
 }
 
 .hero-rest-animate {
@@ -1168,7 +1363,8 @@ const activeDeployment = computed<DeploymentOption>(
   }
 
   .hero-inner {
-    padding: 24px 10px;
+    min-height: auto;
+    padding: 18px 10px 12px;
   }
 
   .hero-kicker {
@@ -1185,6 +1381,38 @@ const activeDeployment = computed<DeploymentOption>(
   .hero-actions {
     margin-top: 16px;
     gap: 8px;
+  }
+
+  .hero-showcase {
+    margin-top: 20px;
+    padding: 0 0 4px;
+  }
+
+  .hero-carousel-viewport {
+    border-radius: 14px;
+  }
+
+  .hero-carousel-image {
+    height: clamp(172px, 48vw, 280px);
+  }
+
+  .hero-carousel-control {
+    width: 36px;
+    height: 36px;
+    font-size: 24px;
+    background: rgba(9, 18, 32, 0.78);
+  }
+
+  .hero-carousel-control-prev {
+    left: 8px;
+  }
+
+  .hero-carousel-control-next {
+    right: 8px;
+  }
+
+  .hero-carousel-dots {
+    margin-top: 10px;
   }
 
   .hero-btn {

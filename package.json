@@ -4,9 +4,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "run-p dev:main dev:astro",
+    "dev:main": "vite",
+    "dev:astro": "npm --prefix astro-docs run dev -- --host 0.0.0.0 --port 4321",
     "build": "run-p type-check \"build-only {@}\" --",
     "preview": "vite preview",
+    "build:astro": "npm --prefix astro-docs run build",
     "test:unit": "vitest",
     "test:e2e": "playwright test",
     "build-only": "vite build",
